@@ -7,3 +7,4 @@ edition = "2024"
 reqwest = { version = "0.12", default-features = false,features = ["blocking", "cookies", "rustls-tls"] }
 md5 = "0.7"
 regex = "1.11"
+itertools = "0.14"
