@@ -8,3 +8,5 @@ reqwest = { version = "0.12", default-features = false,features = ["blocking", "
 md5 = "0.7"
 regex = "1.11"
 itertools = "0.14"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
