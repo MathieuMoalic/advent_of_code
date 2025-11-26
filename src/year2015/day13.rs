@@ -8,68 +8,141 @@ pub fn run(part: usize, input: String) -> String {
     }
 }
 
-fn parse_input(input: String) -> HashMap<String, HashMap<String, isize>> {
-    let mut v = HashMap::new();
+// ============================================================
+// Parsing
+// ============================================================
+
+fn parse_input(input: &str) -> HashMap<String, HashMap<String, isize>> {
+    let mut map: HashMap<String, HashMap<String, isize>> = HashMap::new();
+
     for line in input.lines() {
-        let clean_line = line
+        let clean = line
             .replace("would ", "")
             .replace("gain ", "")
             .replace("lose ", "-")
             .replace(".", "")
             .replace("happiness units by sitting next to ", "");
-        let mut words = clean_line.splitn(3, " ");
 
-        let person1 = words.next().unwrap();
-        let value = words.next().unwrap().parse::<isize>().unwrap();
-        let person2 = words.next().unwrap().to_string();
+        let mut parts = clean.splitn(3, ' ');
 
-        if !v.contains_key(person1) {
-            v.insert(person1.to_string(), HashMap::new());
-        }
-        if let Some(val) = v.get_mut(person1) {
-            val.insert(person2, value);
-        };
+        let p1 = parts.next().unwrap();
+        let val = parts.next().unwrap().parse::<isize>().unwrap();
+        let p2 = parts.next().unwrap();
+
+        map.entry(p1.to_string())
+            .or_default()
+            .insert(p2.to_string(), val);
     }
-    v
+
+    map
 }
-fn permutations<T: Clone>(names: &mut Vec<T>, start: usize, acc: &mut Vec<Vec<T>>) {}
 
-fn calculate_happiness(perm: Vec<&String>, map: &HashMap<String, HashMap<String, isize>>) -> isize {
-    let mut h = 0;
-    for (i, val) in perm.iter().enumerate() {
-        let left = if i == 0 { 7 } else { i - 1 };
-        let right = (i + 1) % 8;
+// ============================================================
+// Generic permutation generator
+// ============================================================
 
-        h += map[*val][*perm.get(left).unwrap()];
-        h += map[*val][*perm.get(right).unwrap()];
+fn permutations<T: Clone>(items: &mut Vec<T>, start: usize, acc: &mut Vec<Vec<T>>) {
+    if start == items.len() {
+        acc.push(items.clone());
+        return;
     }
-    h
+
+    for i in start..items.len() {
+        items.swap(start, i);
+        permutations(items, start + 1, acc);
+        items.swap(start, i);
+    }
 }
+
+// ============================================================
+// Happiness calculation
+// ============================================================
+
+fn calculate_happiness(perm: &[String], map: &HashMap<String, HashMap<String, isize>>) -> isize {
+    let n = perm.len();
+    let mut sum = 0;
+
+    for i in 0..n {
+        let left = if i == 0 { n - 1 } else { i - 1 };
+        let right = (i + 1) % n;
+
+        let me = &perm[i];
+        let left_p = &perm[left];
+        let right_p = &perm[right];
+
+        sum += map[me][left_p];
+        sum += map[me][right_p];
+    }
+
+    sum
+}
+
+// ============================================================
+// Part 1
+// ============================================================
 
 pub fn part1(input: String) -> String {
-    let v = parse_input(input);
-    let mut keys: Vec<_> = v.keys().collect();
+    let map = parse_input(&input);
+
+    // Extract names
+    let names: Vec<String> = map.keys().cloned().collect();
+
+    // Generate permutations (fix the first person to avoid duplicate circular rotations)
+    let fixed = names[0].clone();
+    let mut rest: Vec<String> = names[1..].to_vec();
 
     let mut perms = Vec::new();
-    perms.push(keys.clone());
-    permutations(&mut keys, 0, &mut perms);
+    permutations(&mut rest, 0, &mut perms);
 
-    let mut best_score: isize = 0;
-    for p in perms {
-        println!("{:?}", p);
-        let h = calculate_happiness(p, &v);
-        if h > best_score {
-            best_score = h;
-        }
+    // Evaluate all rotations with fixed first seat
+    let mut best = isize::MIN;
+
+    for mut p in perms {
+        p.insert(0, fixed.clone()); // place fixed person at head
+        let score = calculate_happiness(&p, &map);
+        best = best.max(score);
     }
-    //
-    // let names = v.keys();
-    // // for permutation in
-    // for name in names {
-    //     println!("{name}");
-    // }
-    best_score.to_string()
+
+    best.to_string()
 }
+
+// ============================================================
+// Part 2 ("me" with zero happiness)
+// ============================================================
+
 pub fn part2(input: String) -> String {
-    input.to_owned()
+    let mut map = parse_input(&input);
+
+    let me = "Me".to_string();
+
+    // Add "Me" with zero happiness toward everyone
+    for person in map.clone().keys() {
+        map.entry(person.clone())
+            .or_insert_with(HashMap::new)
+            .insert(me.clone(), 0);
+
+        map.entry(me.clone())
+            .or_insert_with(HashMap::new)
+            .insert(person.clone(), 0);
+    }
+
+    // Extract names
+    let names: Vec<String> = map.keys().cloned().collect();
+
+    // Fix first person to avoid circular duplicates
+    let fixed = names[0].clone();
+    let mut rest: Vec<String> = names[1..].to_vec();
+
+    let mut perms = Vec::new();
+    permutations(&mut rest, 0, &mut perms);
+
+    let mut best = isize::MIN;
+
+    for mut p in perms {
+        p.insert(0, fixed.clone());
+        let score = calculate_happiness(&p, &map);
+        best = best.max(score);
+    }
+
+    best.to_string()
 }
