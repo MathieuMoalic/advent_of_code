@@ -65,6 +65,7 @@ pub fn get_input(year: &usize, day: &usize) -> String {
 }
 
 fn main() {
+    println!("Calculating...");
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 4 {
@@ -94,5 +95,6 @@ fn main() {
         2025 => year2025::run(day, part, input),
         _ => String::from("Wrong year"),
     };
-    println!("{output}")
+    println!("{output}");
+    println!("Done.");
 }
